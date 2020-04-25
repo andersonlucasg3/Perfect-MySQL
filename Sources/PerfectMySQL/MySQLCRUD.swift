@@ -134,7 +134,7 @@ class MySQLCRUDRowReader<K : CodingKey>: KeyedDecodingContainerProtocol {
 			return ret as! T
 		case .data:
 			let bytes: [UInt8] = (val as? [UInt8]) ?? []
-			return Data(bytes: bytes) as! T
+			return Data(bytes) as! T
 		case .uuid:
 			guard let str = val as? String, let uuid = UUID(uuidString: str) else {
 				throw CRUDDecoderError("Invalid UUID string \(String(describing: val)).")
@@ -155,7 +155,9 @@ class MySQLCRUDRowReader<K : CodingKey>: KeyedDecodingContainerProtocol {
 				throw CRUDDecoderError("Unsupported type: \(type) for key: \(key.stringValue)")
 			}
 			return try JSONDecoder().decode(type, from: data)
-		}
+        case .wrapped:
+            throw CRUDDecoderError("[\(#file):\(#function):\(#line)] -> unexpected value \(String(describing: val))")
+        }
 	}
 	func nestedContainer<NestedKey>(keyedBy type: NestedKey.Type, forKey key: Key) throws -> KeyedDecodingContainer<NestedKey> where NestedKey : CodingKey {
 		throw CRUDDecoderError("Unimplimented nestedContainer")
@@ -339,6 +341,8 @@ class MySQLGenDelegate: SQLGenDelegate {
 				typeName = "longtext"
 			case .codable:
 				typeName = "json"
+            case .wrapped:
+                throw MySQLCRUDError("[\(#file):\(#function):\(#line)] -> unexpected value \(type)")
 			}
 		}
 		let addendum: String
